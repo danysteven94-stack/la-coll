@@ -1,0 +1,686 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>La Collection — Rejis Operasyon</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;600;700&family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --teal-deep:#0a3733;
+    --teal:#0e6b60;
+    --teal-bright:#14a893;
+    --amber:#f28b30;
+    --amber-deep:#d8721c;
+    --white:#ffffff;
+    --panel:#f3faf8;
+    --ink:#132625;
+    --muted:#4f6663;
+    --muted-soft:#7f938f;
+    --line:#d8ebe6;
+    --warn:#c1503f;
+    --radius:6px;
+  }
+  *{box-sizing:border-box;}
+  html{scroll-behavior:smooth;}
+  body{
+    margin:0;
+    font-family:'IBM Plex Sans',sans-serif;
+    background:var(--white);
+    color:var(--ink);
+    -webkit-font-smoothing:antialiased;
+  }
+  h1,h2,h3,.display{font-family:'Space Grotesk',sans-serif;}
+  .mono{font-family:'IBM Plex Mono',monospace;}
+  :focus-visible{outline:2px solid var(--amber);outline-offset:2px;}
+  button{font-family:inherit;}
+
+  .shell{display:flex;min-height:100vh;}
+
+  .iconbar{
+    width:76px;flex-shrink:0;background:var(--teal-deep);
+    display:flex;flex-direction:column;align-items:center;padding:18px 0;
+    position:sticky;top:0;height:100vh;
+  }
+  .iconbar .mark{
+    width:38px;height:38px;border-radius:10px;background:var(--amber);
+    display:flex;align-items:center;justify-content:center;
+    font-family:'Space Grotesk',sans-serif;font-weight:700;font-size:13px;color:var(--teal-deep);
+    margin-bottom:22px;flex-shrink:0;cursor:pointer;
+  }
+  .icon-scroll{display:flex;flex-direction:column;gap:6px;overflow-y:auto;width:100%;align-items:center;padding-bottom:10px;}
+  .icon-scroll::-webkit-scrollbar{width:0;}
+  .nav-icon{
+    position:relative;width:52px;height:52px;border-radius:12px;
+    display:flex;align-items:center;justify-content:center;color:rgba(255,255,255,0.65);
+    cursor:pointer;background:transparent;border:none;transition:background .15s,color .15s;flex-shrink:0;
+  }
+  .nav-icon svg{width:21px;height:21px;stroke:currentColor;fill:none;stroke-width:1.8;}
+  .nav-icon:hover{background:rgba(255,255,255,0.08);color:#fff;}
+  .nav-icon.active{background:var(--amber);color:var(--teal-deep);}
+  .nav-icon .num-dot{
+    position:absolute;top:2px;right:2px;width:15px;height:15px;border-radius:50%;
+    background:var(--teal-bright);color:#fff;font-size:8.5px;display:flex;align-items:center;justify-content:center;
+    font-family:'IBM Plex Mono',monospace;border:1.5px solid var(--teal-deep);
+  }
+  .nav-icon.active .num-dot{background:var(--teal-deep);color:var(--amber);border-color:var(--amber);}
+  .nav-tooltip{
+    position:absolute;left:64px;top:50%;transform:translateY(-50%);
+    background:var(--teal-deep);color:#fff;padding:7px 12px;border-radius:5px;font-size:12.5px;
+    white-space:nowrap;pointer-events:none;opacity:0;transition:opacity .12s;z-index:50;
+  }
+  .nav-icon:hover .nav-tooltip{opacity:1;}
+
+  @media(max-width:720px){
+    .shell{flex-direction:column;}
+    .iconbar{width:100%;height:auto;position:sticky;top:0;flex-direction:row;padding:10px 12px;z-index:60;}
+    .iconbar .mark{margin-bottom:0;margin-right:12px;}
+    .icon-scroll{flex-direction:row;overflow-x:auto;overflow-y:visible;padding-bottom:2px;}
+    .nav-tooltip{display:none;}
+  }
+
+  .main{flex:1;min-width:0;}
+
+  .home-hero{
+    background:linear-gradient(135deg,var(--teal-deep) 0%,var(--teal) 100%);
+    color:#fff;padding:56px 36px 48px;position:relative;overflow:hidden;
+  }
+  .home-hero::after{content:"";position:absolute;right:-60px;top:-60px;width:280px;height:280px;border-radius:50%;background:rgba(255,255,255,0.06);}
+  .hero-inner{max-width:760px;position:relative;}
+  .eyebrow{
+    font-family:'IBM Plex Mono',monospace;font-size:12px;letter-spacing:2px;color:var(--amber);
+    text-transform:uppercase;margin-bottom:14px;display:flex;align-items:center;gap:10px;
+  }
+  .eyebrow::before{content:"";width:26px;height:1px;background:var(--amber);display:inline-block;}
+  .hero-inner h1{font-size:clamp(30px,4.6vw,46px);line-height:1.08;margin:0 0 16px 0;font-weight:700;letter-spacing:-0.4px;}
+  .hero-inner p{font-size:15.5px;line-height:1.6;color:rgba(255,255,255,0.82);max-width:540px;margin:0 0 28px 0;}
+  .hero-stats{display:flex;gap:34px;flex-wrap:wrap;}
+  .hero-stat .num{font-family:'Space Grotesk',sans-serif;font-size:26px;font-weight:700;color:var(--amber);}
+  .hero-stat .lbl{font-size:11px;color:rgba(255,255,255,0.7);text-transform:uppercase;letter-spacing:1px;margin-top:2px;}
+  .live-pill{
+    display:inline-flex;align-items:center;gap:6px;margin-top:22px;
+    background:rgba(255,255,255,0.1);border:1px solid rgba(255,255,255,0.25);
+    padding:6px 12px;border-radius:20px;font-size:11.5px;color:rgba(255,255,255,0.85);
+    font-family:'IBM Plex Mono',monospace;
+  }
+  .live-dot{width:7px;height:7px;border-radius:50%;background:#4fd97a;box-shadow:0 0 0 0 rgba(79,217,122,.6);animation:pulse 1.8s infinite;}
+  @keyframes pulse{0%{box-shadow:0 0 0 0 rgba(79,217,122,.55);}70%{box-shadow:0 0 0 7px rgba(79,217,122,0);}100%{box-shadow:0 0 0 0 rgba(79,217,122,0);}}
+
+  .home-body{max-width:1080px;padding:40px 36px 70px;}
+  .section-head{display:flex;align-items:baseline;justify-content:space-between;margin-bottom:20px;flex-wrap:wrap;gap:8px;}
+  .section-head h2{font-size:19px;margin:0;font-weight:600;color:var(--ink);}
+  .section-head .count{font-family:'IBM Plex Mono',monospace;font-size:12px;color:var(--muted-soft);}
+
+  .grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(250px,1fr));gap:14px;}
+  .dossier{
+    background:var(--panel);border:1px solid var(--line);border-radius:var(--radius);
+    padding:18px 18px 16px;cursor:pointer;position:relative;transition:border-color .15s, transform .15s, box-shadow .15s;
+  }
+  .dossier:hover{border-color:var(--teal-bright);transform:translateY(-2px);box-shadow:0 8px 20px rgba(10,55,51,0.1);}
+  .dossier .top-row{display:flex;align-items:center;gap:10px;margin-bottom:10px;}
+  .dossier .icon-chip{width:34px;height:34px;border-radius:9px;background:var(--teal-deep);display:flex;align-items:center;justify-content:center;flex-shrink:0;}
+  .dossier .icon-chip svg{width:17px;height:17px;stroke:var(--amber);fill:none;stroke-width:1.9;}
+  .dossier .idx{font-family:'IBM Plex Mono',monospace;font-size:10.5px;color:var(--muted-soft);letter-spacing:1px;}
+  .dossier h3{font-size:15px;margin:0 0 6px;font-weight:600;line-height:1.3;color:var(--ink);}
+  .dossier .desc{font-size:12.5px;color:var(--muted);line-height:1.45;min-height:34px;}
+  .dossier .footline{display:flex;align-items:center;justify-content:space-between;margin-top:14px;padding-top:12px;border-top:1px solid var(--line);}
+  .dossier .badge-count{font-family:'IBM Plex Mono',monospace;font-size:12px;color:var(--teal-deep);background:#e2f3ef;padding:3px 9px;border-radius:20px;}
+  .dossier .arrow{color:var(--amber-deep);font-size:15px;transition:transform .15s;}
+  .dossier:hover .arrow{transform:translateX(3px);}
+
+  .detail-header{background:linear-gradient(135deg,var(--teal-deep) 0%,var(--teal) 100%);color:#fff;padding:26px 36px;}
+  .detail-header-inner{max-width:960px;}
+  .back-link{
+    color:var(--amber);font-size:12.5px;cursor:pointer;display:inline-flex;align-items:center;gap:6px;
+    margin-bottom:14px;font-family:'IBM Plex Mono',monospace;letter-spacing:.5px;background:none;border:none;padding:0;
+  }
+  .back-link:hover{text-decoration:underline;}
+  .detail-header .head-row{display:flex;align-items:center;gap:12px;}
+  .detail-header .icon-chip{width:42px;height:42px;border-radius:11px;background:rgba(255,255,255,0.12);display:flex;align-items:center;justify-content:center;flex-shrink:0;}
+  .detail-header .icon-chip svg{width:20px;height:20px;stroke:var(--amber);fill:none;stroke-width:1.9;}
+  .detail-header h2{font-size:23px;margin:0 0 3px;font-weight:600;}
+  .detail-header .sub{font-size:13px;color:rgba(255,255,255,0.78);}
+
+  .detail-body{max-width:960px;padding:30px 36px 70px;}
+  .card{background:var(--panel);border-radius:var(--radius);border:1px solid var(--line);padding:22px;margin-bottom:20px;}
+  .card h3{margin:0 0 16px 0;font-size:14px;font-weight:600;color:var(--teal-deep);display:flex;align-items:center;gap:8px;letter-spacing:.2px;}
+  .card h3 .num{width:20px;height:20px;border-radius:50%;background:var(--teal-deep);color:#fff;display:flex;align-items:center;justify-content:center;font-size:10.5px;font-family:'IBM Plex Mono',monospace;}
+  .form-grid{display:grid;grid-template-columns:1fr 1fr;gap:13px;}
+  .field{display:flex;flex-direction:column;gap:5px;}
+  .field.full{grid-column:1/-1;}
+  label{font-size:11.5px;color:var(--muted);font-weight:600;letter-spacing:.3px;text-transform:uppercase;}
+  input,textarea,select{
+    padding:9px 11px;border:1px solid var(--line);border-radius:var(--radius);
+    font-size:14px;font-family:'IBM Plex Sans',sans-serif;background:#fff;color:var(--ink);width:100%;
+  }
+  input:focus,textarea:focus,select:focus{outline:none;border-color:var(--teal-bright);box-shadow:0 0 0 3px rgba(20,168,147,0.15);}
+  textarea{resize:vertical;min-height:56px;font-family:'IBM Plex Sans',sans-serif;}
+  .btn{
+    background:var(--teal-deep);color:#fff;border:none;border-radius:var(--radius);
+    padding:11px 20px;font-size:13.5px;font-weight:600;cursor:pointer;margin-top:16px;transition:background .15s;letter-spacing:.2px;
+  }
+  .btn:hover{background:#062622;}
+  .btn:disabled{opacity:.6;cursor:default;}
+  .btn-del{background:transparent;color:var(--warn);border:none;cursor:pointer;font-size:12px;padding:4px 6px;}
+  .btn-del:hover{text-decoration:underline;}
+
+  .report-filter{
+    display:flex;gap:14px;flex-wrap:wrap;align-items:flex-end;
+    background:#fff;border:1px solid var(--line);border-radius:var(--radius);
+    padding:12px 14px;margin-bottom:16px;
+  }
+  .report-filter .field{flex:0 0 160px;}
+  .report-filter .clear-filter{
+    background:transparent;border:1px solid var(--line);color:var(--muted);
+    border-radius:var(--radius);padding:9px 14px;font-size:12.5px;cursor:pointer;height:38px;
+  }
+  .report-filter .clear-filter:hover{border-color:var(--teal-bright);color:var(--teal-deep);}
+
+  .table-scroll{overflow-x:auto;}
+  table{width:100%;border-collapse:collapse;font-size:12.8px;min-width:560px;}
+  th{text-align:left;color:var(--muted-soft);font-weight:600;font-size:10.2px;text-transform:uppercase;letter-spacing:.4px;padding:8px 9px;border-bottom:2px solid var(--line);font-family:'IBM Plex Mono',monospace;white-space:nowrap;}
+  td{padding:9px;border-bottom:1px solid var(--line);vertical-align:top;}
+  tr:last-child td{border-bottom:none;}
+  .empty{color:var(--muted-soft);font-size:13px;padding:20px 4px;text-align:center;font-style:italic;}
+  .status{font-size:11.5px;color:var(--teal);margin-top:9px;font-family:'IBM Plex Mono',monospace;}
+
+  .toast{
+    position:fixed;bottom:22px;right:22px;background:var(--teal-deep);color:#fff;
+    padding:11px 20px;border-radius:var(--radius);font-size:13px;border-left:3px solid var(--amber);
+    opacity:0;transition:opacity .3s;pointer-events:none;z-index:100;
+  }
+  .toast.show{opacity:1;}
+  .hidden{display:none !important;}
+
+  footer.site{text-align:center;padding:22px;color:var(--muted-soft);font-size:11.5px;font-family:'IBM Plex Mono',monospace;letter-spacing:.5px;border-top:1px solid var(--line);}
+
+  #setupScreen{
+    min-height:100vh;display:flex;align-items:center;justify-content:center;
+    background:var(--teal-deep);padding:30px;
+  }
+  #setupScreen .box{background:#fff;border-radius:10px;max-width:640px;width:100%;padding:36px;}
+  #setupScreen .flag{
+    display:inline-flex;align-items:center;gap:6px;background:#fde9d2;color:var(--amber-deep);
+    font-family:'IBM Plex Mono',monospace;font-size:11.5px;padding:5px 11px;border-radius:20px;margin-bottom:16px;
+  }
+  #setupScreen h2{font-size:22px;margin:0 0 12px;}
+  #setupScreen p{font-size:14px;line-height:1.6;color:var(--muted);margin:0 0 14px;}
+  #setupScreen ol{padding-left:20px;font-size:14px;line-height:1.9;color:var(--ink);}
+  #setupScreen code{background:var(--panel);padding:2px 6px;border-radius:4px;font-family:'IBM Plex Mono',monospace;font-size:12.5px;}
+  #setupScreen a{color:var(--teal);}
+  #setupScreen .err{font-family:'IBM Plex Mono',monospace;font-size:11.5px;color:var(--warn);margin-top:14px;word-break:break-word;}
+
+  @media(max-width:680px){
+    .form-grid{grid-template-columns:1fr;}
+    .home-hero{padding:38px 20px 34px;}
+    .home-body,.detail-body{padding:26px 20px 60px;}
+    .detail-header{padding:20px;}
+  }
+</style>
+</head>
+<body>
+
+<div id="setupScreen" class="hidden">
+  <div class="box">
+    <div class="flag">⚠ Baz done a poko konekte</div>
+    <h2>Konekte yon baz done Vercel KV</h2>
+    <p>Aplikasyon an ap eseye pale ak yon fonksyon sèvè (<code>/api/entries</code>) ki li/ekri nan yon baz done Redis (Upstash), disponib atravè Vercel Marketplace. Etap sa yo fèt yon sèl fwa, dirèkteman nan dashboard Vercel — pa gen kòd pou modifye.</p>
+    <ol>
+      <li>Ale sou <a href="https://vercel.com/dashboard" target="_blank">vercel.com/dashboard</a>, louvri pwojè "la-collection" ou a.</li>
+      <li>Klike tab <strong>Storage</strong> → <strong>Marketplace Database Storage</strong> (oswa "Browse Marketplace") → chèche <strong>Upstash</strong> epi chwazi pwodwi Redis li a.</li>
+      <li>Swiv etap yo pou kreye/konekte yon baz done Redis — chwazi pwojè "la-collection" pou konekte l. Vercel ap mete varyab yo (<code>UPSTASH_REDIS_REST_URL</code>, <code>UPSTASH_REDIS_REST_TOKEN</code>) otomatikman.</li>
+      <li>Redeplwaye pwojè a (nan tab "Deployments", klike "..." sou dènye deplwaman an → "Redeploy").</li>
+      <li>Rafrechi paj sa a.</li>
+    </ol>
+    <div class="err" id="setupErr"></div>
+    <p style="margin-top:16px;"><a href="/api/entries?diag=1" target="_blank">🔍 Klike la a pou wè ki varyab Vercel jwenn</a> (itil si erè a pèsiste).</p>
+  </div>
+</div>
+
+<div class="shell hidden" id="appShell">
+  <nav class="iconbar">
+    <div class="mark" id="brandHome" title="Akèy">LC</div>
+    <div class="icon-scroll" id="iconScroll"></div>
+  </nav>
+
+  <div class="main">
+    <div id="homeView">
+      <div class="home-hero">
+        <div class="hero-inner">
+          <div class="eyebrow">Depo &amp; Livrezon</div>
+          <h1>Tout dosye operasyon w yo,<br>nan yon sèl kote.</h1>
+          <p>Swiv stock, fich debakman, faktè, livrezon ak rapò chak jou — chwazi yon dosye sou kote a oswa anba a pou louvri l dirèkteman.</p>
+          <div class="hero-stats">
+            <div class="hero-stat"><div class="num" id="statTotal">—</div><div class="lbl">Total antre</div></div>
+            <div class="hero-stat"><div class="num" id="statCats">9</div><div class="lbl">Dosye</div></div>
+            <div class="hero-stat"><div class="num" id="statToday">—</div><div class="lbl">Jodi a</div></div>
+          </div>
+          <div class="live-pill"><span class="live-dot"></span> Konekte ak baz done a — sovgad otomatik sou tout aparèy</div>
+        </div>
+      </div>
+      <div class="home-body">
+        <div class="section-head">
+          <h2>Dosye disponib</h2>
+          <div class="count">01 — 09</div>
+        </div>
+        <div class="grid" id="dossierGrid"></div>
+      </div>
+      <footer class="site">LA COLLECTION · REJIS ENTÈN</footer>
+    </div>
+
+    <div id="detailView" class="hidden">
+      <div class="detail-header">
+        <div class="detail-header-inner">
+          <button class="back-link" id="backLink">← TOUNEN AKÈY</button>
+          <div class="head-row">
+            <div class="icon-chip" id="detailIconChip"></div>
+            <div>
+              <h2 id="pageTitle">—</h2>
+              <div class="sub" id="pageSub"></div>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div class="detail-body">
+        <div class="card">
+          <h3><span class="num">+</span> Ajoute yon nouvo antre</h3>
+          <div class="form-grid" id="formGrid"></div>
+          <button class="btn" id="saveBtn">Sovgade antre a</button>
+          <div class="status" id="saveStatus"></div>
+        </div>
+        <div class="card">
+          <h3><span class="num">≡</span> Istorik antre yo</h3>
+          <div class="report-filter hidden" id="reportFilterRow">
+            <div class="field"><label>Du</label><input type="date" id="filterDu"></div>
+            <div class="field"><label>Au</label><input type="date" id="filterAu"></div>
+            <button class="clear-filter" id="clearFilter">Efase filt</button>
+          </div>
+          <div id="listArea"><div class="empty">Chajman...</div></div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+<div class="toast" id="toast"></div>
+
+<script>
+const ICONS = {
+  home: '<path d="M3 11l9-7 9 7"/><path d="M5 10v9a1 1 0 0 0 1 1h4v-6h4v6h4a1 1 0 0 0 1-1v-9"/>',
+  box: '<path d="M3 8l9-5 9 5-9 5-9-5z"/><path d="M3 8v8l9 5 9-5V8"/><path d="M12 13v8"/>',
+  anchor: '<circle cx="12" cy="5" r="2"/><path d="M12 7v14"/><path d="M5 12H2a10 10 0 0 0 20 0h-3"/><path d="M8 12h8"/>',
+  return: '<path d="M9 14l-4-4 4-4"/><path d="M5 10h9a5 5 0 0 1 5 5v1"/>',
+  invoice: '<path d="M6 2h9l3 3v17H6z"/><path d="M15 2v3h3"/><path d="M9 11h6M9 15h6M9 7h3"/>',
+  ledger: '<path d="M4 4h13a2 2 0 0 1 2 2v14H6a2 2 0 0 1-2-2z"/><path d="M4 4v14a2 2 0 0 0 2 2"/><path d="M8 9h7M8 13h7"/>',
+  warn: '<path d="M12 3l10 18H2z"/><path d="M12 10v4"/><path d="M12 17h.01"/>',
+  clipboard: '<rect x="6" y="4" width="12" height="17" rx="1.5"/><rect x="9" y="2" width="6" height="4" rx="1"/><path d="M9 11h6M9 15h6"/>',
+  truck: '<rect x="2" y="7" width="12" height="9" rx="1"/><path d="M14 10h4l3 3v3h-7z"/><circle cx="7" cy="18" r="1.6"/><circle cx="17.5" cy="18" r="1.6"/>',
+  calendar: '<rect x="3" y="5" width="18" height="16" rx="2"/><path d="M3 10h18M8 3v4M16 3v4"/><path d="M8 15h2M14 15h2"/>'
+};
+function iconSvg(key){ return `<svg viewBox="0 0 24 24">${ICONS[key]||ICONS.box}</svg>`; }
+
+const CATEGORIES = [
+  { id:"entree_stock", label:"Entrée de stock", desc:"Pwodwi ki antre nan depo a", icon:"box", fields:[
+    {key:"founisse",label:"Founisè",type:"text"},
+    {key:"bldg",label:"BLDG#",type:"text"},
+    {key:"bl",label:"BL#",type:"text"},
+    {key:"container",label:"Nimewo Container",type:"text"},
+    {key:"recu_le",label:"Reçu le",type:"date"},
+    {key:"recu_par",label:"Reçu par",type:"text"},
+    {key:"code_produit",label:"Code de produit",type:"text"},
+    {key:"qte_packing",label:"Qté packing list",type:"number"},
+    {key:"qte_recue",label:"Qté reçue",type:"number"},
+    {key:"qte_avariee",label:"Qté avariée",type:"number"},
+    {key:"note",label:"Note",type:"textarea",full:true},
+    {key:"verifie_par",label:"Vérifié par",type:"text"}
+  ]},
+  { id:"fiche_debarquement", label:"Fiche de débarquement", desc:"Chajman ki fèk debake", icon:"anchor", fields:[
+    {key:"date",label:"Date",type:"date"},
+    {key:"container",label:"Container",type:"text"},
+    {key:"description",label:"Description",type:"textarea",full:true},
+    {key:"dimansyon",label:"Dimension",type:"text"},
+    {key:"qte",label:"Qté",type:"number"}
+  ]},
+  { id:"marchandises_retournees", label:"Marchandises Retournées", desc:"Machandiz kliyan voye tounen", icon:"return", fields:[
+    {key:"numero",label:"N°",type:"text"},
+    {key:"date",label:"Date",type:"date"},
+    {key:"client",label:"Client",type:"text"},
+    {key:"qte",label:"Qté",type:"number"},
+    {key:"description",label:"Description",type:"textarea",full:true},
+    {key:"prix_unite",label:"Px/unité",type:"number"},
+    {key:"total",label:"Total",type:"number"},
+    {key:"retournees_par",label:"Retournées par",type:"text"},
+    {key:"recues_par",label:"Reçues par",type:"text"},
+    {key:"ref_facture",label:"Réf facture #",type:"text"},
+    {key:"verifie_par",label:"Vérifié par",type:"text"},
+    {key:"appliquees_sur_fact",label:"Appliquées sur fact#",type:"text"},
+    {key:"signature_autorisee",label:"Signature autorisée",type:"text"}
+  ]},
+  { id:"factures_finis", label:"Factures finis", desc:"Fakti ki fin trete", icon:"invoice", fields:[
+    {key:"date_livraison",label:"Date de livraison",type:"date"},
+    {key:"numero_facture",label:"#Facture",type:"text"},
+    {key:"client",label:"Client",type:"text"}
+  ]},
+  { id:"enregistrement_factures", label:"Enregistrement factures", desc:"Anrejistreman fakti — paj rapò", icon:"ledger", reportFilter:true, fields:[
+    {key:"date",label:"Date",type:"date"},
+    {key:"facture",label:"Facture",type:"text"},
+    {key:"client",label:"Client",type:"text"},
+    {key:"entrepot",label:"Entrepôt",type:"text"},
+    {key:"division",label:"Division",type:"text"}
+  ]},
+  { id:"marchandises_avariees", label:"Marchandises Avariées", desc:"Pwodwi ki domaje oswa gate", icon:"warn", fields:[
+    {key:"date",label:"Date",type:"date"},
+    {key:"depot",label:"Dépôt",type:"text"},
+    {key:"article",label:"Article",type:"text"},
+    {key:"qte",label:"Qté",type:"number"},
+    {key:"packing",label:"Packing",type:"text"},
+    {key:"remarque",label:"Remarque",type:"textarea",full:true}
+  ]},
+  { id:"rapport_journalier", label:"Rapport Journalier", desc:"Rezime aktivite chak jou", icon:"clipboard", fields:[
+    {key:"numero",label:"N°",type:"text"},
+    {key:"date",label:"Date",type:"date"},
+    {key:"factures",label:"Factures",type:"text"},
+    {key:"clients",label:"Clients",type:"text"},
+    {key:"articles",label:"Articles",type:"text"},
+    {key:"qte",label:"Qté",type:"number"},
+    {key:"avance_ant",label:"Avance ant.",type:"number"},
+    {key:"ref",label:"Réf.",type:"text"},
+    {key:"avance",label:"Avance",type:"number"},
+    {key:"balance",label:"Balance",type:"number"},
+    {key:"chauffeur",label:"Chauffeur",type:"text"}
+  ]},
+  { id:"rapport_livraison", label:"Rapport de Livraison", desc:"Lis efektif ak frè chak jou livrezon", icon:"truck", fields:[
+    {key:"date",label:"Date",type:"date"},
+    {key:"eff_journaliers",label:"Eff. Journaliers — Nom et Prénom",type:"textarea",full:true},
+    {key:"eff_employes_nourriture",label:"Eff. Employés/nourriture — Nom et Prénom",type:"textarea",full:true},
+    {key:"nombre_journalier",label:"Nombre de journalier",type:"number"},
+    {key:"frais_nourriture",label:"Frais de nourriture",type:"number"},
+    {key:"salaire_journaliers_total",label:"Salaire journaliers total",type:"number"},
+    {key:"grand_total",label:"Grand total",type:"number"}
+  ]},
+  { id:"livraison_journaliere", label:"Livraison Journalière", desc:"Lis livrezon pwograme chak jou", icon:"calendar", fields:[
+    {key:"date",label:"Dat",type:"date"},
+    {key:"client",label:"Kliyan",type:"text"},
+    {key:"produit",label:"Pwodwi",type:"text"},
+    {key:"quantite",label:"Kantite",type:"number"},
+    {key:"notes",label:"Nòt",type:"textarea",full:true}
+  ]}
+];
+
+let currentCat = null;
+let entriesCache = {};
+let pollTimer = null;
+
+function toast(msg){
+  const t = document.getElementById('toast');
+  t.textContent = msg;
+  t.classList.add('show');
+  setTimeout(()=>t.classList.remove('show'), 2200);
+}
+
+async function apiGet(category){
+  const url = category ? `/api/entries?category=${encodeURIComponent(category)}` : '/api/entries';
+  const res = await fetch(url);
+  if(!res.ok){ const b = await res.json().catch(()=>({})); throw new Error(b.error || ('HTTP '+res.status)); }
+  return res.json();
+}
+async function apiAdd(category, data){
+  const res = await fetch('/api/entries', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ category, data })
+  });
+  if(!res.ok){ const b = await res.json().catch(()=>({})); throw new Error(b.error || ('HTTP '+res.status)); }
+  return res.json();
+}
+async function apiDelete(category, id){
+  const res = await fetch(`/api/entries?category=${encodeURIComponent(category)}&id=${encodeURIComponent(id)}`, { method:'DELETE' });
+  if(!res.ok){ const b = await res.json().catch(()=>({})); throw new Error(b.error || ('HTTP '+res.status)); }
+  return res.json();
+}
+
+function stopPolling(){ if(pollTimer){ clearInterval(pollTimer); pollTimer = null; } }
+
+function renderIconbar(){
+  const wrap = document.getElementById('iconScroll');
+  wrap.innerHTML = '';
+  const homeBtn = document.createElement('button');
+  homeBtn.className = 'nav-icon' + (currentCat===null ? ' active' : '');
+  homeBtn.innerHTML = iconSvg('home') + '<span class="nav-tooltip">Akèy</span>';
+  homeBtn.addEventListener('click', renderHome);
+  wrap.appendChild(homeBtn);
+
+  CATEGORIES.forEach((cat,i)=>{
+    const btn = document.createElement('button');
+    btn.className = 'nav-icon' + (currentCat===cat.id ? ' active' : '');
+    const count = (entriesCache[cat.id]||[]).length;
+    btn.innerHTML = iconSvg(cat.icon) +
+      (count>0 ? `<span class="num-dot">${count>9?'9+':count}</span>` : '') +
+      `<span class="nav-tooltip">${String(i+1).padStart(2,'0')} · ${cat.label}</span>`;
+    btn.addEventListener('click', ()=> openCategory(cat.id));
+    wrap.appendChild(btn);
+  });
+}
+
+async function refreshHomeCounts(){
+  try{
+    const all = await apiGet();
+    entriesCache = all;
+    let total = 0, today = 0;
+    const todayStr = new Date().toISOString().slice(0,10);
+    CATEGORIES.forEach(cat=>{
+      const list = entriesCache[cat.id] || [];
+      total += list.length;
+      const el = document.getElementById('count_'+cat.id);
+      if(el) el.textContent = list.length + ' antre';
+      list.forEach(e=>{ if(e.date === todayStr || e.recu_le === todayStr || e.date_livraison === todayStr) today++; });
+    });
+    document.getElementById('statTotal').textContent = total;
+    document.getElementById('statToday').textContent = today;
+    renderIconbar();
+  }catch(e){
+    // silent on background refresh failures
+  }
+}
+
+async function renderHome(){
+  stopPolling();
+  currentCat = null;
+  document.getElementById('homeView').classList.remove('hidden');
+  document.getElementById('detailView').classList.add('hidden');
+  window.scrollTo(0,0);
+
+  const grid = document.getElementById('dossierGrid');
+  grid.innerHTML = CATEGORIES.map((cat,i)=>`
+    <div class="dossier" data-id="${cat.id}">
+      <div class="top-row">
+        <div class="icon-chip">${iconSvg(cat.icon)}</div>
+        <div class="idx">DOSYE No.${String(i+1).padStart(2,'0')}</div>
+      </div>
+      <h3>${cat.label}</h3>
+      <div class="desc">${cat.desc}</div>
+      <div class="footline">
+        <span class="badge-count" id="count_${cat.id}">…</span>
+        <span class="arrow">→</span>
+      </div>
+    </div>
+  `).join('');
+
+  grid.querySelectorAll('.dossier').forEach(el=>{
+    el.addEventListener('click', ()=> openCategory(el.dataset.id));
+  });
+
+  renderIconbar();
+  await refreshHomeCounts();
+  pollTimer = setInterval(refreshHomeCounts, 8000);
+}
+
+function renderForm(cat){
+  const grid = document.getElementById('formGrid');
+  grid.innerHTML = '';
+  cat.fields.forEach(f=>{
+    const wrap = document.createElement('div');
+    wrap.className = 'field' + (f.full ? ' full' : '');
+    const label = document.createElement('label');
+    label.textContent = f.label;
+    let input;
+    if(f.type === 'textarea'){
+      input = document.createElement('textarea');
+    } else {
+      input = document.createElement('input');
+      input.type = f.type;
+    }
+    input.id = 'input_' + f.key;
+    wrap.appendChild(label);
+    wrap.appendChild(input);
+    grid.appendChild(wrap);
+  });
+}
+
+function getFilteredEntries(cat, entries){
+  if(!cat.reportFilter) return entries;
+  const du = document.getElementById('filterDu').value;
+  const au = document.getElementById('filterAu').value;
+  if(!du && !au) return entries;
+  return entries.filter(e=>{
+    if(!e.date) return true;
+    if(du && e.date < du) return false;
+    if(au && e.date > au) return false;
+    return true;
+  });
+}
+
+function renderList(cat, allEntries){
+  const filtered = getFilteredEntries(cat, allEntries || []);
+  const sorted = filtered.slice().sort((a,b)=> (b.createdAt||0) - (a.createdAt||0));
+  const area = document.getElementById('listArea');
+  if(!sorted || sorted.length===0){
+    area.innerHTML = '<div class="empty">Poko gen antre pou dosye sa a.</div>';
+    return;
+  }
+  let html = '<div class="table-scroll"><table><thead><tr>';
+  cat.fields.forEach(f=> html += `<th>${f.label}</th>`);
+  html += '<th></th></tr></thead><tbody>';
+  sorted.forEach(entry=>{
+    html += '<tr>';
+    cat.fields.forEach(f=>{
+      html += `<td>${(entry[f.key]||'').toString().replace(/</g,'&lt;')}</td>`;
+    });
+    html += `<td><button class="btn-del" data-cat="${cat.id}" data-entry="${entry._id}">Efase</button></td>`;
+    html += '</tr>';
+  });
+  html += '</tbody></table></div>';
+  area.innerHTML = html;
+  area.querySelectorAll('.btn-del').forEach(btn=>{
+    btn.addEventListener('click', ()=> deleteEntry(btn.dataset.cat, btn.dataset.entry));
+  });
+}
+
+async function refreshCategory(catId){
+  const cat = CATEGORIES.find(c=>c.id===catId);
+  try{
+    const list = await apiGet(catId);
+    entriesCache[catId] = list;
+    renderList(cat, list);
+    renderIconbar();
+  }catch(e){
+    document.getElementById('listArea').innerHTML = '<div class="empty">Erè koneksyon ak baz done a.</div>';
+  }
+}
+
+async function deleteEntry(catId, entryId){
+  try{
+    await apiDelete(catId, entryId);
+    toast('Antre a efase.');
+    await refreshCategory(catId);
+  }catch(e){
+    toast('Erè pandan efase a.');
+  }
+}
+
+async function saveEntry(){
+  const cat = CATEGORIES.find(c=>c.id===currentCat);
+  const data = {};
+  let hasValue = false;
+  cat.fields.forEach(f=>{
+    const val = document.getElementById('input_'+f.key).value;
+    data[f.key] = val;
+    if(val) hasValue = true;
+  });
+  if(!hasValue){
+    toast('Ranpli omwen yon chan anvan ou sovgade.');
+    return;
+  }
+  const btn = document.getElementById('saveBtn');
+  btn.disabled = true;
+  btn.textContent = 'Ap sovgade...';
+  try{
+    await apiAdd(currentCat, data);
+    cat.fields.forEach(f=>{ document.getElementById('input_'+f.key).value = ''; });
+    document.getElementById('saveStatus').textContent = 'SOVGADE NAN BAZ DONE A — ' + new Date().toLocaleTimeString('fr-FR');
+    toast('Antre a sovgade!');
+    await refreshCategory(currentCat);
+  }catch(e){
+    document.getElementById('saveStatus').textContent = 'ERÈ: ' + e.message;
+  }
+  btn.disabled = false;
+  btn.textContent = 'Sovgade antre a';
+}
+
+async function openCategory(catId){
+  stopPolling();
+  currentCat = catId;
+  const cat = CATEGORIES.find(c=>c.id===catId);
+  document.getElementById('homeView').classList.add('hidden');
+  document.getElementById('detailView').classList.remove('hidden');
+  document.getElementById('detailIconChip').innerHTML = iconSvg(cat.icon);
+  document.getElementById('pageTitle').textContent = cat.label;
+  document.getElementById('pageSub').textContent = cat.desc;
+  document.getElementById('saveStatus').textContent = '';
+  renderForm(cat);
+
+  const filterRow = document.getElementById('reportFilterRow');
+  document.getElementById('filterDu').value = '';
+  document.getElementById('filterAu').value = '';
+  filterRow.classList.toggle('hidden', !cat.reportFilter);
+
+  document.getElementById('listArea').innerHTML = '<div class="empty">Chajman...</div>';
+  window.scrollTo(0,0);
+  renderIconbar();
+
+  await refreshCategory(catId);
+  pollTimer = setInterval(()=>refreshCategory(catId), 5000);
+}
+
+document.getElementById('saveBtn').addEventListener('click', saveEntry);
+document.getElementById('backLink').addEventListener('click', renderHome);
+document.getElementById('brandHome').addEventListener('click', renderHome);
+document.getElementById('filterDu').addEventListener('change', ()=>{
+  const cat = CATEGORIES.find(c=>c.id===currentCat);
+  if(cat) renderList(cat, entriesCache[currentCat]||[]);
+});
+document.getElementById('filterAu').addEventListener('change', ()=>{
+  const cat = CATEGORIES.find(c=>c.id===currentCat);
+  if(cat) renderList(cat, entriesCache[currentCat]||[]);
+});
+document.getElementById('clearFilter').addEventListener('click', ()=>{
+  document.getElementById('filterDu').value = '';
+  document.getElementById('filterAu').value = '';
+  const cat = CATEGORIES.find(c=>c.id===currentCat);
+  if(cat) renderList(cat, entriesCache[currentCat]||[]);
+});
+
+(async function init(){
+  try{
+    await apiGet(); // sanity check that /api/entries + KV works
+    document.getElementById('appShell').classList.remove('hidden');
+    renderHome();
+  }catch(e){
+    document.getElementById('setupScreen').classList.remove('hidden');
+    document.getElementById('setupErr').textContent = 'Detay: ' + e.message;
+  }
+})();
+</script>
+</body>
+</html>
