@@ -196,21 +196,22 @@
 
   footer.site{text-align:center;padding:22px;color:var(--muted-soft);font-size:11.5px;font-family:'IBM Plex Mono',monospace;letter-spacing:.5px;border-top:1px solid var(--line);}
 
-  #setupScreen{
+  #setupScreen, #lockScreen{
     min-height:100vh;display:flex;align-items:center;justify-content:center;
     background:var(--teal-deep);padding:30px;
   }
-  #setupScreen .box{background:#fff;border-radius:10px;max-width:640px;width:100%;padding:36px;}
-  #setupScreen .flag{
+  #setupScreen .box, #lockScreen .box{background:#fff;border-radius:10px;max-width:640px;width:100%;padding:36px;}
+  #setupScreen .flag, #lockScreen .flag{
     display:inline-flex;align-items:center;gap:6px;background:#fde9d2;color:var(--amber-deep);
     font-family:'IBM Plex Mono',monospace;font-size:11.5px;padding:5px 11px;border-radius:20px;margin-bottom:16px;
   }
-  #setupScreen h2{font-size:22px;margin:0 0 12px;}
-  #setupScreen p{font-size:14px;line-height:1.6;color:var(--muted);margin:0 0 14px;}
+  #setupScreen h2, #lockScreen h2{font-size:22px;margin:0 0 12px;}
+  #setupScreen p, #lockScreen p{font-size:14px;line-height:1.6;color:var(--muted);margin:0 0 14px;}
   #setupScreen ol{padding-left:20px;font-size:14px;line-height:1.9;color:var(--ink);}
   #setupScreen code{background:var(--panel);padding:2px 6px;border-radius:4px;font-family:'IBM Plex Mono',monospace;font-size:12.5px;}
   #setupScreen a{color:var(--teal);}
-  #setupScreen .err{font-family:'IBM Plex Mono',monospace;font-size:11.5px;color:var(--warn);margin-top:14px;word-break:break-word;}
+  #setupScreen .err, #lockScreen .err{font-family:'IBM Plex Mono',monospace;font-size:11.5px;color:var(--warn);margin-top:14px;word-break:break-word;}
+  #lockScreen .box{max-width:380px;}
 
   @media(max-width:680px){
     .form-grid{grid-template-columns:1fr;}
@@ -221,6 +222,20 @@
 </style>
 </head>
 <body>
+
+<div id="lockScreen" class="hidden">
+  <div class="box">
+    <div class="flag">🔒 Aksè pwoteje</div>
+    <h2>Antre modpas la pou kontinye</h2>
+    <p>Rejis "La Collection" pwoteje ak yon modpas. Mande responsab la si w pa genyen l.</p>
+    <div class="field" style="margin-bottom:14px;">
+      <label>Modpas</label>
+      <input type="password" id="lockPasswordInput" placeholder="••••">
+    </div>
+    <button class="btn" id="lockSubmitBtn">Antre</button>
+    <div class="err" id="lockErr"></div>
+  </div>
+</div>
 
 <div id="setupScreen" class="hidden">
   <div class="box">
@@ -411,6 +426,7 @@ const CATEGORIES = [
 let currentCat = null;
 let entriesCache = {};
 let pollTimer = null;
+let authToken = localStorage.getItem('lc_auth_token') || null;
 
 function toast(msg){
   const t = document.getElementById('toast');
@@ -419,23 +435,58 @@ function toast(msg){
   setTimeout(()=>t.classList.remove('show'), 2200);
 }
 
+function authHeaders(extra){
+  const h = Object.assign({}, extra || {});
+  if(authToken) h['x-app-token'] = authToken;
+  return h;
+}
+
+function showLock(msg){
+  stopPolling();
+  document.getElementById('appShell').classList.add('hidden');
+  document.getElementById('setupScreen').classList.add('hidden');
+  document.getElementById('lockScreen').classList.remove('hidden');
+  document.getElementById('lockErr').textContent = msg || '';
+}
+
 async function apiGet(category){
   const url = category ? `/api/entries?category=${encodeURIComponent(category)}` : '/api/entries';
-  const res = await fetch(url);
+  const res = await fetch(url, { headers: authHeaders() });
+  if(res.status === 401){
+    authToken = null;
+    localStorage.removeItem('lc_auth_token');
+    showLock('Sesyon an ekspire — antre modpas la ankò.');
+    throw new Error('PA_OTORIZE');
+  }
   if(!res.ok){ const b = await res.json().catch(()=>({})); throw new Error(b.error || ('HTTP '+res.status)); }
   return res.json();
 }
 async function apiAdd(category, data){
   const res = await fetch('/api/entries', {
     method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
+    headers: authHeaders({ 'Content-Type': 'application/json' }),
     body: JSON.stringify({ category, data })
   });
+  if(res.status === 401){
+    authToken = null;
+    localStorage.removeItem('lc_auth_token');
+    showLock('Sesyon an ekspire — antre modpas la ankò.');
+    throw new Error('PA_OTORIZE');
+  }
   if(!res.ok){ const b = await res.json().catch(()=>({})); throw new Error(b.error || ('HTTP '+res.status)); }
   return res.json();
 }
 async function apiDelete(category, id){
-  const res = await fetch(`/api/entries?category=${encodeURIComponent(category)}&id=${encodeURIComponent(id)}`, { method:'DELETE' });
+  const res = await fetch(`/api/entries?category=${encodeURIComponent(category)}&id=${encodeURIComponent(id)}`, {
+    method:'DELETE',
+    headers: authHeaders()
+  });
+  if(res.status === 401){
+    authToken = null;
+    localStorage.removeItem('lc_auth_token');
+    showLock('Sesyon an ekspire — antre modpas la ankò.');
+    throw new Error('PA_OTORIZE');
+  }
   if(!res.ok){ const b = await res.json().catch(()=>({})); throw new Error(b.error || ('HTTP '+res.status)); }
   return res.json();
 }
@@ -671,16 +722,60 @@ document.getElementById('clearFilter').addEventListener('click', ()=>{
   if(cat) renderList(cat, entriesCache[currentCat]||[]);
 });
 
-(async function init(){
+async function tryUnlock(){
+  const input = document.getElementById('lockPasswordInput');
+  const btn = document.getElementById('lockSubmitBtn');
+  const password = input.value;
+  if(!password){ document.getElementById('lockErr').textContent = 'Antre modpas la.'; return; }
+  btn.disabled = true;
+  btn.textContent = 'Ap verifye...';
   try{
-    await apiGet(); // sanity check that /api/entries + KV works
+    const res = await fetch('/api/auth', {
+      method:'POST',
+      headers:{ 'Content-Type':'application/json' },
+      body: JSON.stringify({ password })
+    });
+    const body = await res.json().catch(()=>({}));
+    if(res.ok && body.ok){
+      authToken = body.token;
+      localStorage.setItem('lc_auth_token', authToken);
+      input.value = '';
+      document.getElementById('lockErr').textContent = '';
+      document.getElementById('lockScreen').classList.add('hidden');
+      boot();
+    } else {
+      document.getElementById('lockErr').textContent = body.error || 'Modpas la pa kòrèk.';
+    }
+  }catch(e){
+    document.getElementById('lockErr').textContent = 'Erè koneksyon: ' + e.message;
+  }
+  btn.disabled = false;
+  btn.textContent = 'Antre';
+}
+document.getElementById('lockSubmitBtn').addEventListener('click', tryUnlock);
+document.getElementById('lockPasswordInput').addEventListener('keydown', (e)=>{
+  if(e.key === 'Enter') tryUnlock();
+});
+
+async function boot(){
+  if(!authToken){
+    showLock();
+    return;
+  }
+  try{
+    await apiGet();
+    document.getElementById('lockScreen').classList.add('hidden');
+    document.getElementById('setupScreen').classList.add('hidden');
     document.getElementById('appShell').classList.remove('hidden');
     renderHome();
   }catch(e){
-    document.getElementById('setupScreen').classList.remove('hidden');
-    document.getElementById('setupErr').textContent = 'Detay: ' + e.message;
+    if(e.message !== 'PA_OTORIZE'){
+      document.getElementById('setupScreen').classList.remove('hidden');
+      document.getElementById('setupErr').textContent = 'Detay: ' + e.message;
+    }
   }
-})();
+}
+boot();
 </script>
 </body>
 </html>
