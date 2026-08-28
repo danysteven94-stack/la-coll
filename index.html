@@ -178,6 +178,25 @@
   }
   .report-filter .clear-filter:hover{border-color:var(--teal-bright);color:var(--teal-deep);}
 
+  .lines-title{font-size:12px;font-weight:600;color:var(--teal-deep);text-transform:uppercase;letter-spacing:.4px;margin:4px 0 8px;}
+  #linesTable{min-width:100%;}
+  #linesTable input{padding:6px 8px;font-size:13px;}
+  #linesTable td{padding:5px;}
+  #linesTable th{padding:6px 8px;}
+  .btn-outline-small{
+    background:#fff;border:1px dashed var(--teal-bright);color:var(--teal-deep);
+    border-radius:var(--radius);padding:7px 14px;font-size:12.5px;cursor:pointer;margin-top:8px;
+  }
+  .btn-outline-small:hover{background:var(--panel);}
+  .line-del-btn{background:transparent;border:none;color:var(--warn);cursor:pointer;font-size:15px;padding:2px 6px;}
+
+  .doc-card{background:#fff;border:1px solid var(--line);border-radius:var(--radius);padding:16px;margin-bottom:12px;}
+  .doc-card .doc-head{display:flex;flex-wrap:wrap;gap:6px 18px;margin-bottom:10px;padding-bottom:10px;border-bottom:1px solid var(--line);}
+  .doc-card .doc-head .dh-item{font-size:12.5px;color:var(--ink);}
+  .doc-card .doc-head .dh-item b{color:var(--muted-soft);font-weight:600;text-transform:uppercase;font-size:10px;letter-spacing:.4px;display:block;margin-bottom:1px;}
+  .doc-card .doc-foot{display:flex;flex-wrap:wrap;gap:6px 18px;margin-top:10px;padding-top:10px;border-top:1px solid var(--line);font-size:12.5px;color:var(--muted);}
+  .doc-card .doc-actions{display:flex;justify-content:flex-end;margin-top:8px;}
+
   .table-scroll{overflow-x:auto;}
   table{width:100%;border-collapse:collapse;font-size:12.8px;min-width:560px;}
   th{text-align:left;color:var(--muted-soft);font-weight:600;font-size:10.2px;text-transform:uppercase;letter-spacing:.4px;padding:8px 9px;border-bottom:2px solid var(--line);font-family:'IBM Plex Mono',monospace;white-space:nowrap;}
@@ -301,7 +320,22 @@
       <div class="detail-body">
         <div class="card">
           <h3><span class="num">+</span> Ajoute yon nouvo antre</h3>
+          <div class="field hidden" id="numeroField" style="margin-bottom:13px;max-width:220px;">
+            <label>N°</label>
+            <input type="text" id="input_numero" placeholder="w ap ekri l apre">
+          </div>
           <div class="form-grid" id="formGrid"></div>
+          <div id="linesSection" class="hidden">
+            <div class="lines-title">Pwodwi</div>
+            <div class="table-scroll">
+              <table id="linesTable">
+                <thead id="linesHead"></thead>
+                <tbody id="linesBody"></tbody>
+              </table>
+            </div>
+            <button type="button" class="btn-outline-small" id="addLineBtn">+ Ajoute yon liy</button>
+          </div>
+          <div class="form-grid" id="footerGrid" style="margin-top:14px;"></div>
           <button class="btn" id="saveBtn">Sovgade antre a</button>
           <div class="status" id="saveStatus"></div>
         </div>
@@ -336,20 +370,26 @@ const ICONS = {
 function iconSvg(key){ return `<svg viewBox="0 0 24 24">${ICONS[key]||ICONS.box}</svg>`; }
 
 const CATEGORIES = [
-  { id:"entree_stock", label:"Entrée de stock", desc:"Pwodwi ki antre nan depo a", icon:"box", fields:[
-    {key:"founisse",label:"Founisè",type:"text"},
-    {key:"bldg",label:"BLDG#",type:"text"},
-    {key:"bl",label:"BL#",type:"text"},
-    {key:"container",label:"Nimewo Container",type:"text"},
-    {key:"recu_le",label:"Reçu le",type:"date"},
-    {key:"recu_par",label:"Reçu par",type:"text"},
-    {key:"code_produit",label:"Code de produit",type:"text"},
-    {key:"qte_packing",label:"Qté packing list",type:"number"},
-    {key:"qte_recue",label:"Qté reçue",type:"number"},
-    {key:"qte_avariee",label:"Qté avariée",type:"number"},
-    {key:"note",label:"Note",type:"textarea",full:true},
-    {key:"verifie_par",label:"Vérifié par",type:"text"}
-  ]},
+  { id:"entree_stock", label:"Entrée de stock", desc:"Bon antre depo ak plizyè liy pwodwi", icon:"box", document:true,
+    headerFields:[
+      {key:"fournisseur",label:"Fournisseur",type:"text"},
+      {key:"bldg",label:"BLDG#",type:"text"},
+      {key:"bl",label:"BL#",type:"text"},
+      {key:"container",label:"Container No",type:"text"},
+      {key:"recu_le",label:"Reçu le",type:"date"},
+      {key:"recu_par",label:"Reçu Par",type:"text"}
+    ],
+    lineFields:[
+      {key:"code_produit",label:"Code du Produit",type:"text"},
+      {key:"qte_packing",label:"Qté Packing list",type:"number"},
+      {key:"qte_recue",label:"Qté reçue",type:"number"},
+      {key:"qte_avariee",label:"Qté avariée",type:"number"}
+    ],
+    footerFields:[
+      {key:"note",label:"Note",type:"textarea",full:true},
+      {key:"verifie_par",label:"Vérifiée par",type:"text"}
+    ]
+  },
   { id:"fiche_debarquement", label:"Fiche de débarquement", desc:"Chajman ki fèk debake", icon:"anchor", fields:[
     {key:"date",label:"Date",type:"date"},
     {key:"container",label:"Container",type:"text"},
@@ -427,6 +467,7 @@ let currentCat = null;
 let entriesCache = {};
 let pollTimer = null;
 let authToken = localStorage.getItem('lc_auth_token') || null;
+let currentLines = [];
 
 function toast(msg){
   const t = document.getElementById('toast');
@@ -567,10 +608,9 @@ async function renderHome(){
   pollTimer = setInterval(refreshHomeCounts, 8000);
 }
 
-function renderForm(cat){
-  const grid = document.getElementById('formGrid');
+function renderInputsInto(grid, fieldList, idPrefix){
   grid.innerHTML = '';
-  cat.fields.forEach(f=>{
+  fieldList.forEach(f=>{
     const wrap = document.createElement('div');
     wrap.className = 'field' + (f.full ? ' full' : '');
     const label = document.createElement('label');
@@ -582,12 +622,75 @@ function renderForm(cat){
       input = document.createElement('input');
       input.type = f.type;
     }
-    input.id = 'input_' + f.key;
+    input.id = idPrefix + f.key;
     wrap.appendChild(label);
     wrap.appendChild(input);
     grid.appendChild(wrap);
   });
 }
+
+function renderForm(cat){
+  const formGrid = document.getElementById('formGrid');
+  const numeroField = document.getElementById('numeroField');
+  const linesSection = document.getElementById('linesSection');
+  const footerGrid = document.getElementById('footerGrid');
+
+  if(cat.document){
+    numeroField.classList.remove('hidden');
+    document.getElementById('input_numero').value = '';
+    renderInputsInto(formGrid, cat.headerFields, 'input_h_');
+    linesSection.classList.remove('hidden');
+    currentLines = [ {} ];
+    renderLinesTable(cat);
+    footerGrid.classList.remove('hidden');
+    renderInputsInto(footerGrid, cat.footerFields, 'input_f_');
+  } else {
+    numeroField.classList.add('hidden');
+    linesSection.classList.add('hidden');
+    footerGrid.classList.add('hidden');
+    footerGrid.innerHTML = '';
+    renderInputsInto(formGrid, cat.fields, 'input_');
+  }
+}
+
+function renderLinesTable(cat){
+  const head = document.getElementById('linesHead');
+  const body = document.getElementById('linesBody');
+  head.innerHTML = '<tr>' + cat.lineFields.map(f=>`<th>${f.label}</th>`).join('') + '<th></th></tr>';
+  body.innerHTML = '';
+  currentLines.forEach((line, idx)=>{
+    const tr = document.createElement('tr');
+    cat.lineFields.forEach(f=>{
+      const td = document.createElement('td');
+      const input = document.createElement('input');
+      input.type = f.type;
+      input.value = line[f.key] || '';
+      input.addEventListener('input', ()=>{ currentLines[idx][f.key] = input.value; });
+      td.appendChild(input);
+      tr.appendChild(td);
+    });
+    const tdDel = document.createElement('td');
+    const delBtn = document.createElement('button');
+    delBtn.type = 'button';
+    delBtn.className = 'line-del-btn';
+    delBtn.textContent = '✕';
+    delBtn.addEventListener('click', ()=>{
+      currentLines.splice(idx,1);
+      if(currentLines.length===0) currentLines = [{}];
+      renderLinesTable(cat);
+    });
+    tdDel.appendChild(delBtn);
+    tr.appendChild(tdDel);
+    body.appendChild(tr);
+  });
+}
+
+document.getElementById('addLineBtn').addEventListener('click', ()=>{
+  const cat = CATEGORIES.find(c=>c.id===currentCat);
+  if(!cat) return;
+  currentLines.push({});
+  renderLinesTable(cat);
+});
 
 function getFilteredEntries(cat, entries){
   if(!cat.reportFilter) return entries;
@@ -602,7 +705,54 @@ function getFilteredEntries(cat, entries){
   });
 }
 
+function escapeHtml(v){ return (v||'').toString().replace(/</g,'&lt;'); }
+
+function renderDocumentList(cat, allEntries){
+  const sorted = (allEntries||[]).slice().sort((a,b)=> (b.createdAt||0) - (a.createdAt||0));
+  const area = document.getElementById('listArea');
+  if(sorted.length===0){
+    area.innerHTML = '<div class="empty">Poko gen antre pou dosye sa a.</div>';
+    return;
+  }
+  let html = '';
+  sorted.forEach(entry=>{
+    html += '<div class="doc-card">';
+    html += '<div class="doc-head">';
+    if(entry.numero) html += `<div class="dh-item"><b>N°</b>${escapeHtml(entry.numero)}</div>`;
+    cat.headerFields.forEach(f=>{
+      html += `<div class="dh-item"><b>${f.label}</b>${escapeHtml(entry[f.key])}</div>`;
+    });
+    html += '</div>';
+
+    const lines = Array.isArray(entry.lines) ? entry.lines.filter(l=> cat.lineFields.some(f=> (l[f.key]||'').toString().trim())) : [];
+    if(lines.length){
+      html += '<div class="table-scroll"><table><thead><tr>';
+      cat.lineFields.forEach(f=> html += `<th>${f.label}</th>`);
+      html += '</tr></thead><tbody>';
+      lines.forEach(line=>{
+        html += '<tr>';
+        cat.lineFields.forEach(f=> html += `<td>${escapeHtml(line[f.key])}</td>`);
+        html += '</tr>';
+      });
+      html += '</tbody></table></div>';
+    } else {
+      html += '<div class="empty" style="padding:8px 4px;">Pa gen liy pwodwi.</div>';
+    }
+
+    const footBits = cat.footerFields.map(f=> entry[f.key] ? `<div><b>${f.label}:</b> ${escapeHtml(entry[f.key])}</div>` : '').filter(Boolean).join('');
+    if(footBits) html += `<div class="doc-foot">${footBits}</div>`;
+
+    html += `<div class="doc-actions"><button class="btn-del" data-cat="${cat.id}" data-entry="${entry._id}">Efase</button></div>`;
+    html += '</div>';
+  });
+  area.innerHTML = html;
+  area.querySelectorAll('.btn-del').forEach(btn=>{
+    btn.addEventListener('click', ()=> deleteEntry(btn.dataset.cat, btn.dataset.entry));
+  });
+}
+
 function renderList(cat, allEntries){
+  if(cat.document){ renderDocumentList(cat, allEntries); return; }
   const filtered = getFilteredEntries(cat, allEntries || []);
   const sorted = filtered.slice().sort((a,b)=> (b.createdAt||0) - (a.createdAt||0));
   const area = document.getElementById('listArea');
@@ -652,13 +802,35 @@ async function deleteEntry(catId, entryId){
 
 async function saveEntry(){
   const cat = CATEGORIES.find(c=>c.id===currentCat);
-  const data = {};
+  let data = {};
   let hasValue = false;
-  cat.fields.forEach(f=>{
-    const val = document.getElementById('input_'+f.key).value;
-    data[f.key] = val;
-    if(val) hasValue = true;
-  });
+
+  if(cat.document){
+    const numero = document.getElementById('input_numero').value;
+    if(numero) data.numero = numero;
+    cat.headerFields.forEach(f=>{
+      const val = document.getElementById('input_h_'+f.key).value;
+      data[f.key] = val;
+      if(val) hasValue = true;
+    });
+    const lines = currentLines
+      .map(l=> Object.assign({}, l))
+      .filter(l=> cat.lineFields.some(f=> (l[f.key]||'').toString().trim()));
+    if(lines.length) hasValue = true;
+    data.lines = lines;
+    cat.footerFields.forEach(f=>{
+      const val = document.getElementById('input_f_'+f.key).value;
+      data[f.key] = val;
+      if(val) hasValue = true;
+    });
+  } else {
+    cat.fields.forEach(f=>{
+      const val = document.getElementById('input_'+f.key).value;
+      data[f.key] = val;
+      if(val) hasValue = true;
+    });
+  }
+
   if(!hasValue){
     toast('Ranpli omwen yon chan anvan ou sovgade.');
     return;
@@ -668,7 +840,15 @@ async function saveEntry(){
   btn.textContent = 'Ap sovgade...';
   try{
     await apiAdd(currentCat, data);
-    cat.fields.forEach(f=>{ document.getElementById('input_'+f.key).value = ''; });
+    if(cat.document){
+      document.getElementById('input_numero').value = '';
+      cat.headerFields.forEach(f=>{ document.getElementById('input_h_'+f.key).value = ''; });
+      cat.footerFields.forEach(f=>{ document.getElementById('input_f_'+f.key).value = ''; });
+      currentLines = [{}];
+      renderLinesTable(cat);
+    } else {
+      cat.fields.forEach(f=>{ document.getElementById('input_'+f.key).value = ''; });
+    }
     document.getElementById('saveStatus').textContent = 'SOVGADE NAN BAZ DONE A — ' + new Date().toLocaleTimeString('fr-FR');
     toast('Antre a sovgade!');
     await refreshCategory(currentCat);
