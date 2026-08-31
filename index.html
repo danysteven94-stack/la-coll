@@ -4,6 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>La Collection — Rejis Operasyon</title>
+<link rel="icon" href="/logo.jpg" type="image/jpeg">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;600;700&family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet">
@@ -45,11 +46,11 @@
     position:sticky;top:0;height:100vh;
   }
   .iconbar .mark{
-    width:38px;height:38px;border-radius:10px;background:var(--amber);
-    display:flex;align-items:center;justify-content:center;
-    font-family:'Space Grotesk',sans-serif;font-weight:700;font-size:13px;color:var(--teal-deep);
-    margin-bottom:22px;flex-shrink:0;cursor:pointer;
+    width:42px;height:42px;border-radius:10px;background:#fff;
+    display:flex;align-items:center;justify-content:center;overflow:hidden;
+    margin-bottom:22px;flex-shrink:0;cursor:pointer;padding:3px;
   }
+  .iconbar .mark img{width:100%;height:100%;object-fit:contain;}
   .icon-scroll{display:flex;flex-direction:column;gap:6px;overflow-y:auto;width:100%;align-items:center;padding-bottom:10px;}
   .icon-scroll::-webkit-scrollbar{width:0;}
   .nav-icon{
@@ -231,6 +232,7 @@
   #setupScreen a{color:var(--teal);}
   #setupScreen .err, #lockScreen .err{font-family:'IBM Plex Mono',monospace;font-size:11.5px;color:var(--warn);margin-top:14px;word-break:break-word;}
   #lockScreen .box{max-width:380px;}
+  #setupScreen .box img, #lockScreen .box img{display:block;height:44px;margin-bottom:18px;}
 
   @media(max-width:680px){
     .form-grid{grid-template-columns:1fr;}
@@ -244,6 +246,7 @@
 
 <div id="lockScreen" class="hidden">
   <div class="box">
+    <img src="/logo.jpg" alt="Deka Group">
     <div class="flag">🔒 Aksè pwoteje</div>
     <h2>Antre modpas la pou kontinye</h2>
     <p>Rejis "La Collection" pwoteje ak yon modpas. Mande responsab la si w pa genyen l.</p>
@@ -258,6 +261,7 @@
 
 <div id="setupScreen" class="hidden">
   <div class="box">
+    <img src="/logo.jpg" alt="Deka Group">
     <div class="flag">⚠ Baz done a poko konekte</div>
     <h2>Konekte yon baz done Vercel KV</h2>
     <p>Aplikasyon an ap eseye pale ak yon fonksyon sèvè (<code>/api/entries</code>) ki li/ekri nan yon baz done Redis (Upstash), disponib atravè Vercel Marketplace. Etap sa yo fèt yon sèl fwa, dirèkteman nan dashboard Vercel — pa gen kòd pou modifye.</p>
@@ -275,7 +279,7 @@
 
 <div class="shell hidden" id="appShell">
   <nav class="iconbar">
-    <div class="mark" id="brandHome" title="Akèy">LC</div>
+    <div class="mark" id="brandHome" title="Akèy"><img src="/logo.jpg" alt="Deka Group"></div>
     <div class="icon-scroll" id="iconScroll"></div>
   </nav>
 
@@ -792,6 +796,34 @@ async function refreshCategory(catId){
 }
 
 async function deleteEntry(catId, entryId){
+  const adminPass = window.prompt('Antre modpas ADMIN pou konfime efase a:');
+  if(adminPass === null || adminPass === ''){ return; }
+  try{
+    const res = await fetch('/api/admin-check', {
+      method: 'POST',
+      headers: authHeaders({ 'Content-Type': 'application/json' }),
+      body: JSON.stringify({ password: adminPass })
+    });
+    if(res.status === 401 && res.headers.get('content-length') !== '0'){
+      const b = await res.json().catch(()=>({}));
+      if(b && b.error === 'Ou pa otorize. Antre nan aplikasyon an anvan.'){
+        authToken = null;
+        localStorage.removeItem('lc_auth_token');
+        showLock('Sesyon an ekspire — antre modpas la ankò.');
+        return;
+      }
+      toast(b.error || 'Modpas admin la pa kòrèk — efase anile.');
+      return;
+    }
+    const body = await res.json().catch(()=>({}));
+    if(!(res.ok && body.ok)){
+      toast(body.error || 'Modpas admin la pa kòrèk — efase anile.');
+      return;
+    }
+  }catch(e){
+    toast('Erè verifikasyon admin: ' + e.message);
+    return;
+  }
   try{
     await apiDelete(catId, entryId);
     toast('Antre a efase.');
