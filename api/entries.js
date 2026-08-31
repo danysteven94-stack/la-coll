@@ -1,5 +1,7 @@
 const { Redis } = require('@upstash/redis');
 
+const APP_TOKEN = 'lc-token-2020-9f3d1a';
+
 let _kv = null;
 function getClient() {
   if (_kv) return _kv;
@@ -62,6 +64,13 @@ module.exports = async (req, res) => {
     }
 
     const kv = getClient();
+
+    // Every request except the diagnostic one must carry the token issued
+    // by /api/auth after a correct password.
+    const token = req.headers['x-app-token'];
+    if (token !== APP_TOKEN) {
+      return res.status(401).json({ error: 'Ou pa otorize. Antre modpas la ankò.' });
+    }
 
     if (req.method === 'GET') {
       const { category } = req.query;
